@@ -1,4 +1,5 @@
 import { Maybe } from '@cryptoket/ts-maybe';
+import { Memoize } from '@cryptoket/ts-memoize';
 import express from 'express';
 import { BaseException } from './errors';
 import { logger } from './logger';
@@ -32,7 +33,6 @@ interface EndpointResponse<Data> extends express.Response {
   send(data: ErrorObject | SuccessObject<Data>): this;
 }
 
-// export type LambdaHandler<PE extends PostEndpoint> = (event: LambdaEvent<PE>, context: LambdaContext) => Promise<LambdaResponse<PE>>;
 export type PostHandler<T extends PostEndpoint> = (req: EndpointRequestPost<T['body']>) => Promise<T['response']>;
 
 type RequestHandler<T> = (req: express.Request, res: express.Response, next: express.NextFunction) => Promise<T>;
@@ -43,6 +43,9 @@ export interface IWrappedExpress {
 }
 
 export class WrappedExpress {
+  __memo__: {
+    initialization?: Promise<boolean>;
+  } = {};
   constructor(private props: IWrappedExpress) {}
 
   application(): IWrappedExpress['application'] {
@@ -74,8 +77,18 @@ export class WrappedExpress {
     this.application().get(swaggerPath, this.createSwagger(schema));
   }
 
+  private async initialize(): Promise<boolean> {
+    return Memoize(this, 'initialization', async () => {
+      const { initialize } = this.props;
+      await initialize();
+      return true;
+    });
+  }
+
   private createLambdaHandler<PE extends PostEndpoint = never>(path: PE['path'], handler: PostHandler<PE>, schema: JoiOf<PE['body']>): FinalizedLambdaAPIHandler<PE> {
+    const { initialize } = this.props;
     const lambdaHandler: LambdaHandler<PE> = async (event: LambdaEvent<PE>, context?: LambdaContext) => {
+      await this.initialize();
       const result = await handler(event);
       return { data: result, statusCode: 201 };
     };
@@ -89,10 +102,11 @@ export class WrappedExpress {
 
   private expressWrap<PE extends PostEndpoint>(code: number, handler: RequestHandler<PE['response']>, schema: JoiOf<PE['body']>): RequestHandler<void> {
     const wrapped = async (req: express.Request, res: EndpointResponse<PE['response']>, next: express.NextFunction) => {
-      parseBody<PE['body']>(req.body, schema).then((body) => {
+      this.initialize()
+      .then(() => parseBody<PE['body']>(req.body, schema))
+      .then((body) => {
         req.body = body;
-        const result = handler(req, res, next);
-        return result;
+        return handler(req, res, next);
       }).then((result) => {
         res.status(code).send({
           data: result,
