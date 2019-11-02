@@ -22,7 +22,7 @@ namespace Ping {
   });
 
   export const Handler: PostHandler<Interface> = async (req) => {
-    return { pong: 'ping' };
+    return { pong: req.body.pong as 'ping' };
   };
 
 }
