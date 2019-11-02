@@ -1,0 +1,99 @@
+# Welcome to Serverless!
+#
+# This file is the main config file for your service.
+# It's very minimal at this point and uses default values.
+# You can always add more config options for more control.
+# We've included some commented out config examples here.
+# Just uncomment any of them to get that config option.
+#
+# For full config options, check the docs:
+#    docs.serverless.com
+#
+# Happy Coding!
+
+service: MyService # NOTE: update this with your service name
+
+# You can pin your service to only deploy with a specific Serverless version
+# Check out our docs for more details
+# frameworkVersion: "=X.X.X"
+
+custom:
+  aws:
+    region: 'ap-southeast-1'
+    accountId: TODO
+  cors:
+    origin: '*'
+    headers:
+      - Authorization
+      - Content-Type
+      - Timeout
+    allowCredentials: true
+  customDomain:
+    domainName: something.ramadoka.com
+    basePath: "v1"
+    stage: ${self:provider.stage}
+    createRoute53Record: true
+
+provider:
+  name: aws
+  runtime: provided
+  layers:
+    - arn:aws:lambda:${self:custom.aws.region}:553035198032:layer:nodejs12:7
+  stage: prod
+  region: 'ap-southeast-1'
+  timeout: 900
+  deploymentBucket:
+    name: 'serverless.ramadoka.com'
+    create: false
+  environment:
+    TZ: UTC
+  iamRoleStatements:
+    - Effect: "Allow"
+      Action:
+        - "lambda:invokeFunction"
+      Resource:
+        - "arn:aws:lambda:${self:custom.aws.region}:${self:custom.aws.accountId}:function:TODO_FUNCTION_NAME"
+    - Effect: "Allow"
+      Action:
+        - "s3:ListBucket"
+        - "s3:GetObject"
+        - "s3:PutObject"
+      Resource:
+        - "arn:aws:s3:::essential.ramadoka.com/*"
+    - Effect: "Allow"
+      Action:
+        - "dynamodb:Query"
+        - "dynamodb:PutItem"
+        - "dynamodb:UpdateItem"
+        - "dynamodb:Scan"
+      Resource: 
+        - arn:aws:dynamodb:${self:custom.aws.region}:${self:custom.aws.accountId}:table/TODO_TABLE_NAME*
+
+functions: ${file(./base.yml):FUNCTIONS}
+
+# stepFunctions:
+#   stateMachines:
+#     CouponInvitation:
+#       events:
+#         - schedule: cron(1 1 * * ? *)
+#       definition:
+#         StartAt: GenerateCoupon
+#         States:
+#           GenerateCoupon:
+#             Type: Task
+#             Resource: arn:aws:lambda:#{AWS::Region}:#{AWS::AccountId}:function:${self:service}-${opt:stage}-GenerateCoupon
+#             Next: DecideNext
+#           DecideNext:
+#             Type: Choice
+#             Choices: 
+#               - Variable: "$.finish"
+#                 BooleanEquals: false
+#                 Next: GenerateCoupon
+#             Default: Finish
+#           Finish:
+#             Type: Pass
+#             End: True
+
+# plugins:
+#   - serverless-step-functions
+#   - serverless-pseudo-parameters

@@ -1,0 +1,8 @@
+FUNCTIONS:
+  hello:
+    handler: dist/app.ping
+    events:
+      - http:
+          path: '/ping'
+          method: 'post'
+          cors: ${self:custom.cors}
