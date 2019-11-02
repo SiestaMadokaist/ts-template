@@ -7,6 +7,6 @@
   "watch": [
     "src"
   ],
-  "exec": "yarn start",
+  "exec": "yarn dev",
   "ext": "ts"
 }
