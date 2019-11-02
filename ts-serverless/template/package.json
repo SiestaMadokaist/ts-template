@@ -11,6 +11,8 @@
     "circular": "madge --circular ./dist",
     "graph": "madge --image graph.png ./dist",
     "_deploy": "rm -rf ./dist && yarn fix && tsc && serverless deploy",
+    "start": "node --inspect=5858 -r ts-node/register ./src/app.ts",
+    "start:watch": "nodemon",
     "deploy": "yarn _deploy --config serverless/production.yml",
     "devdeploy": "yarn _deploy --config serverless/development.yml"
   },
